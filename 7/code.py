@@ -46,7 +46,9 @@ class Computer:
 		while not self.terminate and not self.awaiting_input:
 			self._update()
 
-		return self.output_buffer
+		output_return = self.output_buffer
+		self.output_buffer = []
+		return output_return
 
 	###########################################
 
@@ -75,7 +77,7 @@ class Computer:
 	#Output a location
 	def _opcode_4(self):
 		output_val = self.program[ self.params[0] ]
-		print("[OUT]: " + str( output_val ))
+		#print("[OUT]: " + str( output_val ))
 		self.output_buffer.append(output_val)
 		
 	#If location is more than 0, jump to location
@@ -169,7 +171,6 @@ class Computer:
 
 program_data = load_program("input.txt")
 
-computer1 = Computer()
 
 highest_output = 0
 highest_amp_setup = None
@@ -178,19 +179,47 @@ import itertools
 possible_amps = list(itertools.permutations([0,1,2,3,4]))
 
 for amp_setup in possible_amps:
-	phase_setting = None
 	output = [0]
 	for i in range(5):
-		computer1.load_opcode_program(program_data)
+		computer = Computer()
+		computer.load_opcode_program(program_data)
 
 		for i in [amp_setup[i], output[0]]:
-			computer1.input(i)
+			computer.input(i)
 
-		output = computer1.run_opcode_program()
+		output = computer.run_opcode_program()
 	
 	if output[0] > highest_output:
 		highest_output = output[0]
 		highest_amp_setup = amp_setup
 
-print(str(highest_output))
-print(str(highest_amp_setup))
+print("Highest Thruster Output (Single Pass): " +str(highest_output))
+print("Best Phase Setup (Single Pass): " +str(highest_amp_setup))
+
+import itertools
+possible_amps = list(itertools.permutations([5,6,7,8,9]))
+
+for amp_setup in possible_amps:
+	output = [0]
+	
+	##Set up computers
+	computers = []
+	for i in range(5):
+		computers.append(Computer())
+		computers[i].load_opcode_program(program_data)
+		computers[i].input(amp_setup[i])#prime the phase setting
+	
+	terminated = False
+	while terminated == False:
+		for i in range(5):
+			for input_config in [output[0]]:
+				computers[i].input(input_config)
+				
+			output = computers[i].run_opcode_program()
+			terminated = computers[i].terminate
+		if output[0] > highest_output:
+			highest_output = output[0]
+			highest_amp_setup = amp_setup
+
+print("Highest Thruster Output (Feedback): " +str(highest_output))
+print("Best Phase Setup (Feedback): " +str(highest_amp_setup))
